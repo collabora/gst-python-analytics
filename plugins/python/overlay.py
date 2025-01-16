@@ -263,31 +263,10 @@ class Overlay(GstBase.BaseTransform):
         if not success:
             return Gst.FlowReturn.ERROR
 
-        surface = None
         cairo_surface = None
         cr = None
 
         try:
-            # Create Skia surface for the main canvas
-            surface = self.create_overlay_surface(map_info, self.width, self.height)
-            canvas = surface.getCanvas()
-
-            # Fade out existing circles on trail surface
-            self.trail_surface.getCanvas().drawColor(
-                skia.Color4f(0, 0, 0, 0.1), skia.BlendMode.kDstIn
-            )
-
-            # Fade and draw circles from history
-            for past_point in self.history:
-                self.draw_trail_circle(
-                    self.trail_surface.getCanvas(),
-                    past_point["center"],
-                    past_point["opacity"],
-                    past_point["color"],
-                )
-                # Gradually fade the opacity of each point
-                past_point["opacity"] *= 0.9
-
             # Create a Cairo surface for text rendering directly on buffer data
             cairo_surface = cairo.ImageSurface.create_for_data(
                 map_info.data,
@@ -300,37 +279,15 @@ class Overlay(GstBase.BaseTransform):
 
             # Draw bounding boxes and labels on main surface
             for data in metadata:
-                self.draw_bounding_box(canvas, data["box"])
-                track_id = data.get("track_id")  # Assumes `track_id` is available in metadata
-                color = self.get_color_for_id(track_id)
-
-                # Adjust the center point to be lower toward the bottom of the bounding box
-                center = {
-                    "x": (data["box"]["x1"] + data["box"]["x2"]) / 2,
-                    "y": (data["box"]["y1"] * 0.25 + data["box"]["y2"] * 0.75),
-                }
-
-                self.draw_trail_circle(
-                    self.trail_surface.getCanvas(), center, 1.0, color
+                # Draw bounding box
+                self.draw_bounding_box_with_cairo(
+                    cr, data["box"]
                 )
 
-                # Add new point to history with color and opacity information
-                self.history.append({"center": center, "opacity": 1.0, "color": color})
-
-                # Draw label near the bounding box using Cairo for faster text rendering
+                # Draw label near the bounding box using Cairo
                 self.draw_label_with_cairo(
                     cr, data["label"], data["box"]["x1"], data["box"]["y1"]
                 )
-
-            if len(self.history) > self.max_history_length:
-                self.history.pop(0)
-
-            # Composite trail surface onto main surface
-            paint = skia.Paint()
-            paint.setColor(
-                skia.Color4f(1, 1, 1, 0.9)
-            )  # Set color with alpha for blending
-            canvas.drawImage(self.trail_surface.makeImageSnapshot(), 0, 0, paint)
 
             # Ensure Cairo operations are complete before unmapping
             cr.stroke()
@@ -338,8 +295,6 @@ class Overlay(GstBase.BaseTransform):
 
         finally:
             # Cleanup resources
-            if surface:
-                del surface
             if cairo_surface:
                 del cairo_surface
             if cr:
