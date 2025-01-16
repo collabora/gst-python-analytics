@@ -349,6 +349,21 @@ class Overlay(GstBase.BaseTransform):
 
         return Gst.FlowReturn.OK
 
+    def draw_bounding_box_with_cairo(self, cr, box):
+        """Draw a bounding box using Cairo."""
+        cr.set_line_width(2.0)
+        cr.set_source_rgb(1, 0, 0)  # Red color for bounding box
+        cr.rectangle(box["x1"], box["y1"], box["x2"] - box["x1"], box["y2"] - box["y1"])
+        cr.stroke()
+
+    def draw_label_with_cairo(self, cr, label, x, y):
+        """Draw a label using Cairo at the specified position."""
+        cr.set_font_size(12)
+        cr.set_source_rgb(1, 1, 1)  # White color for label
+        cr.move_to(x, y - 10)  # Position the text above the bounding box
+        cr.show_text(label)
+        cr.stroke()
+
     def draw_bounding_box(self, canvas, box):
         paint = skia.Paint(
             Color=self.outline_color, StrokeWidth=2, Style=skia.Paint.kStroke_Style
