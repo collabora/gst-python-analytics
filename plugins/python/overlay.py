@@ -113,7 +113,11 @@ class Overlay(GstBase.BaseTransform):
         return True
 
     def do_set_caps(self, incaps, outcaps):
-        video_info = GstVideo.VideoInfo.new_from_caps(incaps)
+        video_info = GstVideo.VideoInfo()
+        success = video_info.from_caps(incaps)
+        if not success:
+            Gst.error("Failed to initialize VideoInfo from caps.")
+            return False
         self.width = video_info.width
         self.height = video_info.height
         Gst.info(f"Video caps set: width={self.width}, height={self.height}")
