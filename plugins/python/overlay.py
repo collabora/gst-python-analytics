@@ -21,7 +21,6 @@ CAN_REGISTER_ELEMENT = True
 try:
     import re
     import gi
-    import skia
     import cairo
     import numpy as np
     import json
